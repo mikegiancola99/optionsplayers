@@ -220,9 +220,6 @@
 
         // Fire event
         this.trigger("init");
-        //this.webview.addEventListener("MSWebViewScriptNotify", ChatMessageNotifyHandler2);
-
-        console.log("hello mikeg: " + this.localFolder.path);
         
         let filepath = this.localFolder.createFileAsync("test2.txt")
              .then(msgFile => Windows.Storage.FileIO.appendTextAsync(msgFile, "bacon"))
@@ -230,19 +227,7 @@
             console.log("success!:");
         }, function (error) { console.log("error:" + error) });
         
-        //this.localFolder.createFileAsync("test1.txt").done(function () {
-         //this.localFolder.appendTextAsync()
-        //});
-        //Windows.Storage.PathIO.appendTextAsync(, "hello").done(function () {
-        
-        //    console.log("success!:");
-        //},
-        //function (error) {
-        //    console.log("error:" + error);
-        //});
-
         // Navigate to the start page
-        //this.navigateTo("https://microsoftedge.github.io/JSBrowser/");
         this.navigateTo("https://optionsplayers.com/chat/view");
     }.bind(browser));
 

@@ -1,5 +1,6 @@
 ﻿// JavaScript source code
 var gMessageList = [];
+var gLogFilename = "test5.txt";
 
 function CheckIfInList(cur_node)
 {
@@ -26,16 +27,22 @@ function HashString(str2Hash)
 function WriteToFile(message2write)
 {
     localFolder = Windows.Storage.ApplicationData.current.localFolder;
-    localFolder.tryGetItemAsync("test4.txt")
+    localFolder.tryGetItemAsync(gLogFilename)
     .then(function (msgFile) 
     { 
-        if (null != msgFile) 
-        { 
+        if (null != msgFile) {
             Windows.Storage.FileIO.appendTextAsync(msgFile, message2write);
+        }
+        else {
+            localFolder.createFileAsync(gLogFilename).then(
+            function (msgFile) {
+                if (null != msgFile)
+                    Windows.Storage.FileIO.appendTextAsync(msgFile, message2write);
+            });
         }
     }, function (error)
     {
-        localFolder.createFileAsync("test4.txt").then(
+        localFolder.createFileAsync(gLogFilename).then(
         function (msgFile) {
             if (null != msgFile)
                 Windows.Storage.FileIO.appendTextAsync(msgFile, message2write);
@@ -45,6 +52,10 @@ function WriteToFile(message2write)
 
 function ChatMessageNotifyHandler(name)
 {
+    var cur_date = new Date();
+    var real_month = cur_date.getMonth() + 1;
+    gLogFilename = real_month + "_" + cur_date.getDate() + "_" + cur_date.getFullYear() + ".txt";
+
     var msgObject = new Object();
     msgObject.msg = name.value;
     msgObject.hash = HashString(name.value);
@@ -62,7 +73,8 @@ function ErrorHandler(error)
 }
 
 function HandleStartSaveClick()
-{
+{    
+    console.log(cur_date);
     var javascriptcode; 
     javascriptcode = "function GetMsgData()";
     javascriptcode += "{";
@@ -88,11 +100,12 @@ function HandleStartSaveClick()
     javascriptcode +=         "}"; // for
     javascriptcode +=     "}"; // if
     javascriptcode += "}"; // function
-    javascriptcode += "GetMsgData();setInterval(GetMsgData, 10000);"
+    javascriptcode += "GetMsgData();setInterval(GetMsgData, 30000);"
 
     var injectedJavascript = WebView.invokeScriptAsync('eval', javascriptcode);
     injectedJavascript.error = ErrorHandler;
     injectedJavascript.start();
+    this.backButton.disabled = true;
 }
 
 browser.on("init", function () {
@@ -133,14 +146,6 @@ browser.on("init", function () {
 
     // Listen for the back button to navigate backwards
     this.backButton.addEventListener("click", () => HandleStartSaveClick());
-
-    //this.time_trigger = Windows.ApplicationModel.Background.TimeTrigger(Number(1), Boolean(false))
-    //Windows.ApplicationModel.Background.TimeTrigger(Number(1), Boolean(false));
-    //var builder = new Windows.ApplicationModel.Background.BackgroundTaskBuilder();
-    //builder.Name = "chatUpdateTimer";
-    //builder.TaskEntryPoint = HandleStartSaveClick;
-    //builder.SetTrigger(time_trigger);
-    //var task = builder.Register();
 
     // Listen for the forward button to navigate forwards
     this.forwardButton.addEventListener("click", () => this.webview.goForward());
