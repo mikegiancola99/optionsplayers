@@ -227,7 +227,6 @@
         let filepath = this.localFolder.createFileAsync("test2.txt")
              .then(msgFile => Windows.Storage.FileIO.appendTextAsync(msgFile, "bacon"))
         .done(function () {
-
             console.log("success!:");
         }, function (error) { console.log("error:" + error) });
         
