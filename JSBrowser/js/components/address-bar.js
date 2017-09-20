@@ -162,14 +162,14 @@
     });
 
     // Listen for the tweet button
-    this.tweetIcon.addEventListener("click", () => {
-        let domain = (this.currentUrl && new URI(this.currentUrl).host) || "microsoft.com";
-        let path = "https://twitter.com/intent/tweet";
-        let tags = ["Windows", "UWP"].map(encodeURIComponent);
-        let text = encodeURIComponent(`I visited ${domain} in a browser built with HTML and JavaScript \u{1F332}. Find out more here:`);
-        let url = encodeURIComponent("http://bit.ly/1IDpBVA");
-        this.navigateTo(`${path}?hashtags=${tags.join()}&text=${text}&url=${url}`);
-    });
+    //this.tweetIcon.addEventListener("click", () => {
+    //    let domain = (this.currentUrl && new URI(this.currentUrl).host) || "microsoft.com";
+    //    let path = "https://twitter.com/intent/tweet";
+    //    let tags = ["Windows", "UWP"].map(encodeURIComponent);
+    //    let text = encodeURIComponent(`I visited ${domain} in a browser built with HTML and JavaScript \u{1F332}. Find out more here:`);
+    //    let url = encodeURIComponent("http://bit.ly/1IDpBVA");
+    //    this.navigateTo(`${path}?hashtags=${tags.join()}&text=${text}&url=${url}`);
+    //});
 
     // Listen for the loss of focus on the address bar to unselect the text
     this.urlInput.addEventListener("blur", () => getSelection().removeAllRanges());

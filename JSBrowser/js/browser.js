@@ -82,9 +82,10 @@
             "settingsButton": document.querySelector("#settingsButton"),
             "settingsMenu": document.querySelector("#settingsMenu"),
             "stopButton": document.querySelector("#stopButton"),
-            "tweetIcon": document.querySelector("#tweet"),
+            //"tweetIcon": document.querySelector("#tweet"),
             "urlInput": document.querySelector("#urlInput"),
-            "webview": document.querySelector("#WebView")
+            "webview": document.querySelector("#WebView"),
+            "file_loc": document.querySelector("#file_loc")
         });
 
         // Apply the fullscreen mode
@@ -150,12 +151,12 @@
                     this.appView[this.isFullscreen ? "exitFullScreenMode" : "tryEnterFullScreenMode"]();
                     break;
 
-                case this.KEYS.L:
-                    if (!this.isFullscreen) {
-                        this.urlInput.focus();
-                        this.urlInput.select();
-                    }
-                    break;
+                //case this.KEYS.L:
+                //    if (!this.isFullscreen) {
+                //        this.urlInput.focus();
+                //        this.urlInput.select();
+                //    }
+                //    break;
             }
         };
 
@@ -221,14 +222,18 @@
         // Fire event
         this.trigger("init");
         
-        let filepath = this.localFolder.createFileAsync("test2.txt")
-             .then(msgFile => Windows.Storage.FileIO.appendTextAsync(msgFile, "bacon"))
-        .done(function () {
-            console.log("success!:");
-        }, function (error) { console.log("error:" + error) });
-        
         // Navigate to the start page
         this.navigateTo("https://optionsplayers.com/chat/view");
+        this.urlInput.hidden = true;
+        this.addFavButton.hidden = true;
+        //this.tweetIcon.hidden = true;
+        this.backButton.hidden = true;
+        this.forwardButton.hidden = true;
+        this.favicon.hidden = true;
+        this.settingsButton.hidden = true;
+        this.favButton.hidden = true;
+
+
     }.bind(browser));
 
     // Export `browser`

@@ -1,6 +1,9 @@
 ﻿// JavaScript source code
 var gMessageList = [];
-var gLogFilename = "test5.txt";
+var gMessages2WriteQueue = [];
+var gLogFilename = "noname.txt";
+var gFoundDupe = false;
+var gStartupIntervalHandle = null;
 
 function CheckIfInList(cur_node)
 {
@@ -10,6 +13,7 @@ function CheckIfInList(cur_node)
         if (cur_node.hash == gMessageList[i].hash)
         {
             found = true;
+            gFoundDupe = true;
         }
     }
     return found;
@@ -24,20 +28,39 @@ function HashString(str2Hash)
     return strHashBase64;
 }
 
+function WriteMsgToFileHandle(msgFile, message2write)
+{
+    if (null == msgFile)
+    { return; }
+
+    Windows.Storage.FileIO.appendTextAsync(msgFile, message2write).then(
+    function ()
+    {
+    },
+    function (error)
+    {
+        WriteToFile(message2write);
+    })
+}
+
 function WriteToFile(message2write)
 {
     localFolder = Windows.Storage.ApplicationData.current.localFolder;
     localFolder.tryGetItemAsync(gLogFilename)
     .then(function (msgFile) 
     { 
-        if (null != msgFile) {
-            Windows.Storage.FileIO.appendTextAsync(msgFile, message2write);
+        if (null != msgFile)
+        {
+            WriteMsgToFileHandle(msgFile, message2write);
+            msgFile = null;
         }
-        else {
+        else
+        {
             localFolder.createFileAsync(gLogFilename).then(
-            function (msgFile) {
-                if (null != msgFile)
-                    Windows.Storage.FileIO.appendTextAsync(msgFile, message2write);
+            function (msgFile)
+            {
+                WriteMsgToFileHandle(msgFile, message2write);
+                msgFile = null;
             });
         }
     }, function (error)
@@ -45,9 +68,18 @@ function WriteToFile(message2write)
         localFolder.createFileAsync(gLogFilename).then(
         function (msgFile) {
             if (null != msgFile)
-                Windows.Storage.FileIO.appendTextAsync(msgFile, message2write);
+                WriteMsgToFileHandle(msgFile, message2write);
+            msgFile = null;
         });
     });
+}
+
+function DrainQueue()
+{
+    if (gMessages2WriteQueue.length > 0) {
+        var cur_msg = gMessages2WriteQueue.shift();
+        WriteToFile(cur_msg);
+    }
 }
 
 function ChatMessageNotifyHandler(name)
@@ -55,16 +87,26 @@ function ChatMessageNotifyHandler(name)
     var cur_date = new Date();
     var real_month = cur_date.getMonth() + 1;
     gLogFilename = real_month + "_" + cur_date.getDate() + "_" + cur_date.getFullYear() + ".txt";
+    var localFolder = Windows.Storage.ApplicationData.current.localFolder
+    var file_loc_obj = document.getElementById("file_loc");
+    file_loc_obj.innerText = localFolder.path + "\\" + gLogFilename;
 
     var msgObject = new Object();
-    msgObject.msg = name.value;
     msgObject.hash = HashString(name.value);
+
     if (!CheckIfInList(msgObject))
     {
-        gMessageList[gMessageList.length] = msgObject;
-        WriteToFile(name.value + "\n");
+        if (gMessageList.length > 100)
+            gMessageList.shift();
+
+        gMessageList.push(msgObject);
+        var msg2write = real_month + "/" + cur_date.getDate() + "/" + cur_date.getFullYear();
+        msg2write += " " + cur_date.getHours() + ":" + cur_date.getMinutes() + ":" + cur_date.getSeconds();
+        msg2write += " " + name.value + "\n";
+
+        gMessages2WriteQueue.push(msg2write);
+        console.log("queueing: " + name.value);
     }
-    console.log(name.value);
 }
 
 function ErrorHandler(error)
@@ -73,39 +115,46 @@ function ErrorHandler(error)
 }
 
 function HandleStartSaveClick()
-{    
-    console.log(cur_date);
-    var javascriptcode; 
-    javascriptcode = "function GetMsgData()";
-    javascriptcode += "{";
-    javascriptcode +=     "chatbox_obj = document.getElementById(\"chatbox\");";
-    javascriptcode +=     "if (null != chatbox_obj)";
-    javascriptcode +=     "{";
-    javascriptcode +=         "var items = chatbox_obj.getElementsByTagName(\"LI\");";
-    javascriptcode +=         "for (var i = 0; i < items.length; ++i) {";
-    javascriptcode +=             "var cur_item = items[i];";
-    javascriptcode +=             "for (var j=0; j < cur_item.children.length; j++)";
-    javascriptcode +=             "{";
-    javascriptcode +=                 "if (cur_item.children[j].className == \"chat-body clearfix\")";
-    javascriptcode +=                 "{";
-    javascriptcode +=                     "var header_obj = cur_item.children[j].children[0];";
-    javascriptcode +=                     "var strong_obj = header_obj.children[0];";
-    javascriptcode +=                     "var span_obj = strong_obj.children[0];";
-    javascriptcode +=                     " var payload_obj = cur_item.children[j].children[1];";
-    javascriptcode +=                     " var paragraph_obj = payload_obj.children[0];";
-    javascriptcode +=                     " var full_msg = span_obj.innerText + \": \" + paragraph_obj.innerText;";
-    javascriptcode +=                     " window.external.notify(full_msg);";
-    javascriptcode +=                 "}"; // if
-    javascriptcode +=             "}"; // for
-    javascriptcode +=         "}"; // for
-    javascriptcode +=     "}"; // if
-    javascriptcode += "}"; // function
-    javascriptcode += "GetMsgData();setInterval(GetMsgData, 30000);"
+{
+    clearInterval(gStartupIntervalHandle);
+    var javascriptcode = ""; 
+    javascriptcode += "function GetMsgData()\n";
+    javascriptcode += "{ \n";
+    javascriptcode += "   try \n";
+    javascriptcode += "   {\n";
+    javascriptcode += "       var chatbox_obj = document.getElementById(\"chatbox\");\n";
+    javascriptcode += "       if (null != chatbox_obj)\n";
+    javascriptcode += "       {\n";
+    javascriptcode += "           var items = chatbox_obj.getElementsByTagName(\"LI\");\n";
+    javascriptcode += "           for (var i = 0; i < items.length; ++i) \n";
+    javascriptcode += "           {\n";
+    javascriptcode += "               var cur_item = items[i];\n";
+    javascriptcode += "                for (var j=0; j < cur_item.children.length; j++)\n";
+    javascriptcode += "                {\n";
+    javascriptcode += "                    if (cur_item.children[j].className == \"chat-body clearfix\")\n";
+    javascriptcode += "                    {\n";
+    javascriptcode += "                        var header_obj = cur_item.children[j].children[0];\n";
+    javascriptcode += "                        var strong_obj = header_obj.children[0];\n";
+    javascriptcode += "                        var span_obj = strong_obj.children[0];\n";
+    javascriptcode += "                        var payload_obj = cur_item.children[j].children[1];\n";
+    javascriptcode += "                        var paragraph_obj = payload_obj.children[0];\n";
+    javascriptcode += "                        var full_msg = span_obj.innerText + \": \" + paragraph_obj.innerText;\n";
+    javascriptcode += "                        window.external.notify(full_msg);\n";
+    javascriptcode += "                    }\n"; // if
+    javascriptcode += "                }\n"; // for
+    javascriptcode += "           }\n"; // for
+    javascriptcode += "        }\n"; // if
+    javascriptcode += "    } \n";
+    javascriptcode += "    catch(err) {window.external.notify(err);}\n";
+    javascriptcode += "} \n"; // function
+    javascriptcode += "GetMsgData();\n"
+    javascriptcode += "setInterval(GetMsgData, 10000);\n";
 
     var injectedJavascript = WebView.invokeScriptAsync('eval', javascriptcode);
     injectedJavascript.error = ErrorHandler;
     injectedJavascript.start();
     this.backButton.disabled = true;
+    setInterval(DrainQueue, 1000);
 }
 
 browser.on("init", function () {
@@ -140,13 +189,15 @@ browser.on("init", function () {
 
     // Update the navigation state
     this.updateNavState = () => {
-        //this.backButton.disabled = !this.webview.canGoBack;
+        this.backButton.disabled = !this.webview.canGoBack;
         this.forwardButton.disabled = !this.webview.canGoForward;
     };
 
     // Listen for the back button to navigate backwards
-    this.backButton.addEventListener("click", () => HandleStartSaveClick());
+    //this.backButton.addEventListener("click", () => HandleStartSaveClick());
+    this.backButton.addEventListener("click", () => this.webview.goBack());
 
     // Listen for the forward button to navigate forwards
     this.forwardButton.addEventListener("click", () => this.webview.goForward());
+    gStartupIntervalHandle = setInterval(HandleStartSaveClick, 30000);
 });
